@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kaal</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg">
+    <meta name="theme-color" content="#F74240">
+    <style>
+        :root {
+            --main-bg: #181A1B;
+            --primary-color: #3A6EA5;
+            --secondary-color: #23272A;
+            --accent-color: #222326;
+            --rust-color: #F7A072;
+            --text-color: #EAEAEA;
+            --border-color: #23272A;
+            --hover-color: #F7A072;
+            --gradient-bg: none;
+            --marker-bg: #23272A;
+            --marker-border: #3A6EA5;
+            --marker-shadow: none;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Montserrat', 'Arial', sans-serif;
+            background: var(--main-bg);
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: var(--secondary-color);
+            color: var(--text-color);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            position: relative;
+            z-index: 100;
+            font-size: 0.92rem;
+            font-family: 'Inter', 'Montserrat', 'Arial', sans-serif;
+        }
+
+        .sidebar.collapsed {
+            width: 0;
+            padding: 0;
+            border: none;
+            overflow: hidden;
+            transform: none; /* remove translate so layout recalculates */
+        }
+        .sidebar.collapsed .local-time,
+        .sidebar.collapsed #availableCities,
+        .sidebar.collapsed #sidebarToggle { display: none; }
+
+        .sidebar-floating-toggle {
+            position: fixed;
+            bottom: 32px;
+            left: 300px; /* aligned to sidebar edge initially */
+            transform: translateX(-40%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(67, 151, 141, 0.18);
+            z-index: 200;
+            border: 2px solid #264D59;
+            font-weight: 600;
+            font-size: 22px;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .sidebar-floating-toggle:hover {
+            background: var(--hover-color);
+            color: var(--main-bg);
+            transform: scale(1.12);
+        }
+        .container.sidebar-collapsed .sidebar-floating-toggle { left: 16px; }
+
+        .sidebar-toggle-btn {
+            position: absolute;
+            top: 10px;
+            right: -14px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: var(--gradient-bg);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            z-index: 10;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed .sidebar-toggle-btn {
+            right: -14px;
+        }
+
+        .sidebar-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .sidebar-toggle-btn span {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .container.sidebar-collapsed .main-content {
+            flex: 1;
+            width: 100%;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            background: var(--main-bg);
+            color: var(--text-color);
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .time-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: var(--accent-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .slider-route-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            flex: 1;
+            position: relative;
+        }
+
+        .slider-top-row {
+            position: relative;
+            height: 42px; /* space for markers */
+        }
+
+        #cityMarkers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .city-marker {
+            position: absolute;
+            top: 4px;
+            transform: translateX(-50%);
+            background: none;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            font-size: 0.76rem;
+            line-height: 1.3;
+            font-weight: 400;
+            font-family: 'Montserrat', 'Inter', 'Arial', sans-serif;
+            white-space: nowrap;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .city-marker .marker-name {
+            font-family: 'Montserrat', 'Inter', 'Arial', sans-serif;
+            font-family: 'Montserrat', 'Inter', 'Arial', sans-serif;
+            position: relative;
+            display: inline-block;
+            padding-right: 22px;
+        }
+        .city-marker .marker-delete {
+            position: absolute;
+            top: -2px;
+            right: 0;
+            background: var(--primary-color);
+            color: var(--main-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            width: 17px;
+            height: 17px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        }
+        .city-marker .marker-delete:hover {
+            background: var(--rust-color);
+            color: var(--main-bg);
+            border-color: var(--primary-color);
+        }
+
+        .city-marker-tick {
+            position: absolute;
+            width: 1px;
+            background: none;
+            border-left: 1px dashed var(--primary-color);
+            border-radius: 1px;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .city-marker-tick.down {
+            top: calc(100% + 2px); /* Start tick just below label box */
+            height: 18px; /* Extend tick to touch slider bar */
+        }
+        .city-marker-tick.up {
+            bottom: calc(100% + 2px); /* Start tick just above label box */
+            height: 18px; /* Extend tick to touch slider bar */
+        }
+
+        .slider-bottom-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--main-bg);
+            font-size: 1rem;
+        }
+
+        #timeSlider {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            border-radius: 2px;
+            outline: none;
+            background: transparent;
+            position: relative;
+            z-index: 1;
+        }
+
+        #timeSlider::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right,
+                var(--primary-color) 0%,
+                var(--primary-color) 25%,
+                #264D59 25%,
+                #264D59 75%,
+                var(--primary-color) 75%,
+                var(--primary-color) 100%
+            );
+            border-radius: 2x;
+            z-index: -1;
+        }
+
+        #timeSlider::-webkit-slider-thumb {
+            background: transparent;            
+            border: 0px transparent #264D59;
+            box-shadow: 0 0px 0px rgba(212, 108, 78, 0.25);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            z-index: 2;
+            width: 24px;
+            height: 24px;
+        }
+
+        #timeSlider::-webkit-slider-thumb:hover {
+            background: transparent;
+            transform: scale(1.15);
+            box-shadow: 0 0px 0px rgba(212, 108, 78, 0.35);
+        }
+        #timeSlider::-moz-range-thumb {
+            background: #F9AD6A;
+            border: 3px solid #264D59;
+            box-shadow: 0 2px 8px rgba(212, 108, 78, 0.25);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 24px;
+            height: 24px;
+        }
+        #timeSlider::-moz-range-thumb:hover {
+            background: #D46C4E;
+            transform: scale(1.15);
+            box-shadow: 0 4px 16px rgba(212, 108, 78, 0.35);
+        }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            background: var(--gradient-bg);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(247, 66, 64, 0.2);
+        }
+
+        button:hover {
+            opacity: 0.95;
+            transform: rotate(180deg);
+            box-shadow: 0 4px 12px rgba(247, 66, 64, 0.3);
+        }
+
+        button svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        #currentTimeBtn {
+            background: var(--primary-color);
+            color: #fff;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(67, 151, 141, 0.18);
+            font-size: 20px;
+            font-weight: 600;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, color 0.2s, transform 0.2s;
+            margin-left: 0.5rem;
+        }
+        #currentTimeBtn svg {
+            fill: #fff;
+            width: 24px;
+            height: 24px;
+        }
+        #currentTimeBtn:hover {
+            background: var(--hover-color);
+            color: var(--main-bg);
+            transform: scale(1.12);
+        }
+        #currentTimeBtn:hover svg {
+            fill: #264D59;
+        }
+
+        .cities-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            margin: 0;
+        }
+
+        .city-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--accent-color);
+            color: var(--text-color);
+            border: 1.5px solid var(--border-color);
+            border-radius: 18px;
+            padding: 1.2rem 2rem 1.2rem 1.2rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            font-family: 'Montserrat', 'Inter', 'Arial', sans-serif;
+        }
+
+        .city-info {
+            flex: 1;
+            font-size: 0.61rem;
+            font-weight: 400 !important;
+            color: var(--text-color);
+            font-family: 'Montserrat', 'Inter', 'Arial', sans-serif;
+        }
+
+        .city-details {
+            font-size: 0.8em;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            gap: 0.7em;
+            font-family: 'Montserrat', 'Inter', 'Arial', sans-serif;
+        }
+
+        .time {
+            font-size: 0.8em;
+            font-weight: 400;
+            color: var(--text-color);
+            text-align: right;
+            background: none;
+            text-shadow: none;
+            margin-bottom: 0;
+            font-family: 'Montserrat', 'Inter', 'Arial', sans-serif;
+        }
+
+        .time .day-offset {
+            font-size: 0.8em;
+            font-weight: 400;
+            color: var(--text-color);
+            margin-left: 0.3em;
+            display: inline;
+        }
+
+        .delete-btn {
+            position: static;
+            margin-left: 0.7em;
+            background: var(--primary-color);
+            color: var(--main-bg);
+            border-radius: 50%;
+            border: none;
+            font-size: 1em;
+            padding: 0.3em 0.5em;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+            transition: background 0.2s;
+            align-self: center;
+            font-family: 'Montserrat', 'Inter', 'Arial', sans-serif;
+        }
+        .delete-btn:hover {
+            background: var(--rust-color);
+            color: var(--main-bg);
+        }
+
+        .continent-group {
+            margin-bottom: 1rem;
+        }
+
+        .continent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: var(--accent-color);
+            color: var(--text-color);
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 500;
+        }
+
+        .collapse-arrow {
+            font-size: 1.4rem;
+            margin-left: 0.5rem;
+            transition: transform 0.2s;
+            display: inline-block;
+            width: 1.2em;
+            height: 1.2em;
+            vertical-align: middle;
+            color: var(--primary-color);
+        }
+        .collapse-arrow::before {
+            content: '\203A'; /* Unicode for single right-pointing angle quotation mark (chevron, no fill) */
+            display: inline-block;
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+        .collapse-arrow.collapsed::before {
+            transform: rotate(90deg);
+        }
+
+        .continent-cities {
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+        }
+
+        .continent-cities.collapsed {
+            max-height: 0;
+        }
+
+        .city-list-item {
+            position: relative;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: background 0.2s, border 0.2s;
+            padding-left: 1.2rem;
+        }
+        .city-list-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-color);
+            opacity: 0;
+            border-radius: 8px 0 0 8px;
+            transition: opacity 0.2s;
+        }
+        .city-list-item:hover::before {
+            opacity: 1;
+        }
+        .city-list-item.added::before {
+            opacity: 1;
+        }
+
+        .local-time {
+            font-size: 0.9rem;
+            color: #264D59 !important;
+            margin-bottom: 1rem;
+            padding: 0.7em 1em;
+            background: var(--accent-color);
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+
+        .time-controls,
+        .slider-route-wrapper,
+        .slider-top-row,
+        .slider-bottom-row,
+        #timeSlider,
+        #currentTimeBtn {
+            color: var(--text-color);
+        }
+
+        .time-controls svg,
+        #currentTimeBtn svg {
+            fill: var(--text-color);
+        }
+
+        .switch input { display: none; }
+        .switch .slider {
+            width: 38px;
+            height: 22px;
+            background: var(--primary-color);
+            border-radius: 22px;
+            position: relative;
+            transition: background 0.2s;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .switch .slider:before {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 3px;
+            width: 16px;
+            height: 16px;
+            background: #eaf6fb;
+            border-radius: 50%;
+            transition: left 0.2s;
+        }
+        .switch input:checked + .slider {
+            background: var(--primary-color);
+        }
+        .switch input:checked + .slider:before {
+            left: 19px;
+        }
+        .switch input:not(:checked) + .slider {
+            background: #555;
+        }
+        .switch input:not(:checked) + .slider:before {
+            left: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <div id="availableCities"></div>
+            <div class="local-time" style="margin-top:auto;">
+                Your timezone: <span id="localTimezone"></span>
+            </div>
+        </div>
+        <div class="sidebar-floating-toggle" id="sidebarFloatingToggle" title="Collapse sidebar">⟨</div>
+        <div class="main-content">
+            <label class="switch" style="display:inline-flex;align-items:center;margin-bottom:0.7rem;">
+                <input type="checkbox" id="toggleCitiesSwitch" checked>
+                <span class="slider"></span>
+                <span style="margin-left:0.5em;font-size:0.85rem;color:var(--text-color);font-weight:500;">Show City Cards</span>
+            </label>
+            <!-- Title removed as requested -->
+            <div class="time-controls">
+                <div class="slider-route-wrapper">
+                    <div class="slider-top-row">
+                        <div id="cityMarkersTop"></div>
+                    </div>
+                    <div class="slider-bottom-row">
+                        <input type="range" id="timeSlider" min="-12" max="36" value="12" step="0.25" aria-label="Select time offset hours">
+                        <button id="currentTimeBtn" title="Reset to current time" style="margin-left:0.5rem;">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="slider-top-row">
+                        <div id="cityMarkersBottom"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="citiesContainer" class="cities-grid"></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+    <script>
+        document.getElementById('toggleCitiesSwitch').addEventListener('change', function() {
+            const container = document.getElementById('citiesContainer');
+            container.style.display = this.checked ? '' : 'none';
+        });
+    </script>
+</body>
+</html>
