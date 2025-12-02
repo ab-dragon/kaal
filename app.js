@@ -43,6 +43,7 @@ const citiesByContinent = {
         'Lisbon': 'Europe/Lisbon'
     },
     'North America': {
+        'Atlanta': 'America/New_York',
         'Halifax': 'America/Halifax',
         'Manchester, NH': 'America/New_York',
         'New York': 'America/New_York',
